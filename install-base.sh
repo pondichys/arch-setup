@@ -1,5 +1,5 @@
 # Basic packages
-sudo pacman -S --noconfirm --needed bat chezmoi curl eza fastfetch fd fzf \
+sudo pacman -S --noconfirm --needed bat btop chezmoi curl eza fastfetch fd fzf \
 go-yq jq meld neovim ripgrep starship tealdeer tmux unzip wget zellij zoxide
 
 # Git tools
