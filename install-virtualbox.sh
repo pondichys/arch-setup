@@ -2,10 +2,10 @@
 #set -e
 
 # Install linux headers
-sudo pacman -S --needed --noconfirm linux-headers
+# sudo pacman -S --needed --noconfirm linux-headers
 
 # Install virtualbox
-sudo pacman -S --needed --noconfirm virtualbox virtualbox-host-dkms
+sudo pacman -S --needed --noconfirm virtualbox virtualbox-host-dkms vitualbox-guest-iso
 
 # resolution issues Jan/2023
 # VBoxManage setextradata "Your Virtual Machine Name" "VBoxInternal2/EfiGraphicsResolution" "2560x1440"
