@@ -35,3 +35,6 @@ When = PostTransaction
 Exec = /usr/bin/grub-mkconfig -o /boot/grub/grub.cfg
   EOF
 fi
+
+# Firewall
+sudo pacman -S --needed --noconfirm ufw

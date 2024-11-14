@@ -20,7 +20,7 @@ sudo pacman -S --needed --noconfirm \
 plasma-desktop \
 dolphin ffmpegthumbs \
 qt6-multimedia qt6-multimedia-gstreamer qt6-multimedia-ffmpeg \
-konsole kscreen plasma-nm plasma-pa \
+konsole kscreen plasma-nm plasma-pa plasma-firewall \
 ark print-manager spectacle plasma-systemmonitor kwalletmanager
 ```
 
