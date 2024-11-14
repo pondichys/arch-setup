@@ -11,3 +11,7 @@ sudo pacman -S --noconfirm --needed fish
 
 # Flatpak
 sudo pacman -S --noconfirm --needed flatpak
+
+# Pacman stuff
+sudo pacman -S --needed --noconfirm pacman-contrib
+sudo systemctl enable paccache.timer
