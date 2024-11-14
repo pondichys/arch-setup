@@ -16,7 +16,12 @@ reflector --country <country> --protocol https --sort rate
 # plasma-nm : NetworkManager add-on
 # plasma-pa : sound management add-on
 
-sudo pacman -S plasma-desktop konsole kscreen plasma-nm plasma-pa
+sudo pacman -S --needed --noconfirm \
+plasma-desktop \
+dolphin ffmpegthumbs \
+qt6-multimedia qt6-multimedia-gstreamer qt6-multimedia-ffmpeg \
+konsole kscreen plasma-nm plasma-pa \
+ark print-manager spectacle plasma-systemmonitor kwalletmanager
 ```
 
 
