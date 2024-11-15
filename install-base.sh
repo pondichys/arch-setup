@@ -36,5 +36,18 @@ Exec = /usr/bin/grub-mkconfig -o /boot/grub/grub.cfg
   EOF
 fi
 
-# Firewall
+# Install yay AUR helper
+sudo pacman -S --needed --noconfirm git base-devel \
+&& git clone https://aur.archlinux.org/yay-bin.git \
+&& cd yay-bin && makepkg -si
+
+echo "Install arch-update from AUR"
+yay -S arch-update
+# Add the arch-update-tray.desktop app in your XDG Autostart directory
+cp -v /usr/share/applications/arch-update-tray.desktop $HOME/.config/autostart
+
+echo "Enable the arch-update systemd timer"
+systemctl --user enable --now arch-update.timer
+
+echo "Install Uncomplicated Firewall"
 sudo pacman -S --needed --noconfirm ufw
