@@ -17,11 +17,17 @@ reflector --country <country> --protocol https --sort rate
 # plasma-pa : sound management add-on
 
 sudo pacman -S --needed --noconfirm \
-plasma-desktop \
+plasma-desktop sddm sddm-kcm \
 dolphin ffmpegthumbs \
 qt6-multimedia qt6-multimedia-gstreamer qt6-multimedia-ffmpeg \
 konsole kscreen plasma-nm plasma-pa plasma-firewall \
 ark print-manager spectacle plasma-systemmonitor kwalletmanager
 ```
+## Snapper snapshots
 
+Create a snapper configuration named root for / path
+
+Install `snap-pac` package to automatically create snapshots when a `pacman` transaction is executed.
+
+Reference: [snap-pac documentation](https://barnettphd.com/snap-pac/index.html)
 
