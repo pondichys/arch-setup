@@ -36,10 +36,13 @@ Exec = /usr/bin/grub-mkconfig -o /boot/grub/grub.cfg
   EOF
 fi
 
-# Install yay AUR helper
-sudo pacman -S --needed --noconfirm git base-devel \
-&& git clone https://aur.archlinux.org/yay-bin.git \
-&& cd yay-bin && makepkg -si
+# Install yay AUR helper if not already present
+if ! cmd -v yay &> /dev/null; then
+  sudo pacman -S --needed --noconfirm base-devel
+  git clone https://aur.archlinux.org/yay-bin.git
+  cd yay-bin
+  makepkg -si
+fi
 
 echo "Install arch-update from AUR"
 yay -S arch-update
@@ -50,4 +53,4 @@ echo "Enable the arch-update systemd timer"
 systemctl --user enable --now arch-update.timer
 
 echo "Install Uncomplicated Firewall"
-sudo pacman -S --needed --noconfirm ufw
+sudo pacman -S --needed --noconfirm ufw gufw
