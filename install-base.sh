@@ -56,3 +56,6 @@ systemctl --user enable --now arch-update.timer
 
 echo "Install Uncomplicated Firewall"
 sudo pacman -S --needed --noconfirm ufw gufw
+
+# Add current user to sudoers
+echo "${USER} ALL=(ALL:ALL) ALL" | sudo tee /etc/sudoers.d/${USER}
