@@ -2,7 +2,7 @@
 
 Before pacstrap
 
-Edit /etc/pacman.conf to enable parallel downloads
+Edit `/etc/pacman.conf` to enable parallel downloads.
 
 Use reflector to generate a list of mirrors based on your contry
 
@@ -30,4 +30,7 @@ Create a snapper configuration named root for / path
 Install `snap-pac` package to automatically create snapshots when a `pacman` transaction is executed.
 
 Reference: [snap-pac documentation](https://barnettphd.com/snap-pac/index.html)
+
+## Enable multithread compilation of AUR packages
+Edit the file `/etc/makepkg.conf` and set `MAKEFLAGS="-j<number of threads>"`
 
