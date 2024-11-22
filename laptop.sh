@@ -13,3 +13,5 @@ sudo systemctl start tlp.service
 sudo systemctl mask systemd-rfkill.service
 sudo systemctl mask systemd-rfkill.socket
 
+# Install upower for battery information
+sudo pacman -S --needed --noconfirm upower
