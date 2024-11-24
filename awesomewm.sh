@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 sudo pacman -S --needed --noconfirm awesome
+sudo pacman -S --needed --noconfirm xdg-user-dirs
 
 sudo pacman -S --needed --noconfirm lxappearance
 sudo pacman -S --needed --noconfirm network-manager-applet polkit-gnome picom blueman
