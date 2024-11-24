@@ -8,3 +8,6 @@ sudo pacman -S --needed --noconfirm network-manager-applet polkit-gnome picom bl
 
 # Other stuff to check
 sudo pacman -S --needed --noconfirm pcmanfm-qt lxqt-archiver gvfs flameshot
+
+# Some file system tools that can be handy
+sudo pacman -S --needed --noconfirm dosfstools
