@@ -46,6 +46,7 @@ fi
 
 # Install yay AUR helper if not already present
 if ! cmd -v yay &> /dev/null; then
+if ! command -v yay &> /dev/null; then
   sudo pacman -S --needed --noconfirm base-devel
   git clone https://aur.archlinux.org/yay-bin.git
   cd yay-bin
