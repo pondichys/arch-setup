@@ -17,6 +17,7 @@ sudo pacman -S --noconfirm --needed flatpak
 
 # Pacman stuff
 sudo pacman -S --needed --noconfirm pacman-contrib
+
 sudo systemctl enable paccache.timer
 
 # Only run this if on pure archlinux
@@ -45,7 +46,6 @@ EOF
 fi
 
 # Install yay AUR helper if not already present
-if ! cmd -v yay &> /dev/null; then
 if ! command -v yay &> /dev/null; then
   sudo pacman -S --needed --noconfirm base-devel
   git clone https://aur.archlinux.org/yay-bin.git
@@ -53,13 +53,15 @@ if ! command -v yay &> /dev/null; then
   makepkg -si
 fi
 
-echo "Install arch-update from AUR"
-yay -S arch-update
-# Add the arch-update-tray.desktop app in your XDG Autostart directory
-cp -v /usr/share/applications/arch-update-tray.desktop $HOME/.config/autostart
+if ! command -v arch-update &> /dev/null ; then
+	echo "Install arch-update from AUR"
+	yay -S arch-update
+	# Add the arch-update-tray.desktop app in your XDG Autostart directory
+	cp -v /usr/share/applications/arch-update-tray.desktop $HOME/.config/autostart
 
-echo "Enable the arch-update systemd timer"
-systemctl --user enable --now arch-update.timer
+	echo "Enable the arch-update systemd timer"
+	systemctl --user enable --now arch-update.timer
+fi
 
 echo "Install Uncomplicated Firewall"
 sudo pacman -S --needed --noconfirm ufw gufw
