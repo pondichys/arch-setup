@@ -18,13 +18,17 @@ sudo pacman -S --noconfirm --needed flatpak
 # Pacman stuff
 sudo pacman -S --needed --noconfirm pacman-contrib
 sudo systemctl enable paccache.timer
-## pacman hook for grub update
-if [ ! -d /etc/pacman.d/hooks ]; then
-  sudo mkdir -p /etc/pacman.d/hooks
-fi
 
-if [ ! -f /etc/pacman.d/hooks/91-update-grub.hook ]; then
-  cat <<EOF | sudo tee -a /etc/pacman.d/hooks/91-update-grub.hook
+# Only run this if on pure archlinux
+os_release=$(grep -e "^ID=" /etc/os-release | cut -d'=' -f2)
+if [ ${os_release} = "arch" ]; then
+## pacman hook for grub update
+	if [ ! -d /etc/pacman.d/hooks ]; then
+  		sudo mkdir -p /etc/pacman.d/hooks
+	fi
+
+	if [ ! -f /etc/pacman.d/hooks/91-update-grub.hook ]; then
+  		cat <<EOF | sudo tee -a /etc/pacman.d/hooks/91-update-grub.hook
 [Trigger]
 Type = File
 Operation = Install
@@ -36,7 +40,8 @@ Target = usr/lib/modules/*/vmlinuz
 Description = Updating grub configuration ...
 When = PostTransaction
 Exec = /usr/bin/grub-mkconfig -o /boot/grub/grub.cfg
-  EOF
+EOF
+	fi
 fi
 
 # Install yay AUR helper if not already present
