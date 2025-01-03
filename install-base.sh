@@ -9,6 +9,7 @@ sudo pacman -S --noconfirm --needed git git-delta github-cli lazygit
 
 # Shells
 sudo pacman -S --noconfirm --needed bash bash-completion
+sudo pacman -S --noconfirm --needed zsh zsh-completions
 sudo pacman -S --noconfirm --needed fish
 
 # Flatpak
