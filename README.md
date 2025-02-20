@@ -2,7 +2,12 @@ CAUTION : this is a WIP and the instructions are not working currently
 rEFInd is not able to find the linux kernels as of now
 
 
-# Install Arch Linux with BTRFS, snapper, REFIND and full disk encryption on UEFI machine
+# Install Arch Linux with BTRFS, snapper, REFIND and disk encryption on UEFI machine
+
+## Context
+This procedure does not allow a full disk encryption as rEFInd boot manager does not support encrypted /boot partitions like grub does.
+
+To enhance the security of the installation, I enable secure boot
 
 ## Download latest arch linux iso
 
@@ -60,7 +65,6 @@ I prefer a simple partition layout as following
 
 / : the main partition. Use BTRFS to enable snapshots and subvolumes.
 /efi : EFI system partition. Use /efi instead of /boot/efi as mentioned in the [EFI system partition - Typical mount points](https://wiki.archlinux.org/title/EFI_system_partition#Typical_mount_points) section of Arch Wiki. 
-swap : optional swap partition if you use a laptop and want to use hibernation
 
 Use cfdisk (or fdisk if you prefer) to create your partitions.
 
@@ -68,14 +72,16 @@ Use cfdisk (or fdisk if you prefer) to create your partitions.
 # Identify your disk device where you want to install arch linux
 lsblk
 
+# Zap the hard drive
+## !!!!!!! This action deletes everything on the selected device !!!!!!!
+sgdisk -Z /dev/vda
+
 # For a virtual machine it will be /dev/vda
 # For a bare metal machine with nvme /dev/nvme0n1
 cfdisk /dev/vda
 # Use gpt label type
 # /dev/vda1  EFI system  1 GB
 # /dev/vda2  Linux Filesystem  the rest (minus swap if you create one)
-# Optional swap
-# /dev/vda3  Swap  RAM + 1G if you want to use hibernation
 ```
 
 ## LUKS encryption
@@ -152,9 +158,9 @@ Tune the system for optimized download
 nano /etc/pacman.conf
 # Set ParallelDownloads to a reasonable number according to your internet connection performance
 
-reflector --country <country> --protocol https --sort rate
+reflector --country <country> --age 24 --protocol https --sort rate --save /etc/pacman.d/mirrorlist
 
-pacstrap -K /mnt base base-devel linux-lts linux-firmware btrfs-progs \
+pacstrap -K /mnt base base-devel linux linux-firmware amd-ucode btrfs-progs \
     neovim networkmanager refind git
 ```
 
@@ -173,20 +179,14 @@ timedatectl set-ntp true
 # CHROOT into the newly installed system
 arch-chroot /mnt
 
-# Set the timezone
-ln -sf /usr/share/zoneinfo/Europe/Brussels /etc/localtime
-hwclock --systohc
 
 # Edit /etc/local.gen and uncomment your locales
-# I personnaly use en_US.UTF-8 UTF-8
+# I use en_US.UTF-8 UTF-8
 # Regenerate the locales
 locale-gen
 
-echo "LANG=\"en_US.UTF-8\"" >> /etc/locale.conf
-echo "KEYMAP=be-latin1" > /etc/vconsole.conf
-
-# Set the hostname
-echo "your_host_name" > /etc/hostname
+# Configure console keymap, timezone and hostname
+systemd-firstboot --prompt
 
 # Add user
 USER=<your_user_name>
@@ -225,27 +225,9 @@ passwd
 # Exit chroot and reboot
 exit
 reboot
-
 ```
 
 
-
-
-```bash
-# Install not so minimal KDE desktop
-# plasma-desktop : minimal KDE
-# konsole : a terminal
-# kscreen : KDE screen and display manager
-# plasma-nm : NetworkManager add-on
-# plasma-pa : sound management add-on
-
-sudo pacman -S --needed --noconfirm \
-plasma-desktop sddm sddm-kcm \
-dolphin ffmpegthumbs \
-qt6-multimedia qt6-multimedia-gstreamer qt6-multimedia-ffmpeg \
-konsole kscreen plasma-nm plasma-pa plasma-firewall \
-ark print-manager spectacle plasma-systemmonitor kwalletmanager
-```
 
 
 
