@@ -60,7 +60,10 @@ if ! command -v arch-update &>/dev/null; then
   echo "Install arch-update from AUR"
   yay -S arch-update
   # Add the arch-update-tray.desktop app in your XDG Autostart directory
-  cp -v /usr/share/applications/arch-update-tray.desktop $HOME/.config/autostart
+  if [ ! -d "$HOME/.config/autostart" ]; then
+    mkdir -pv "$HOME/.config/autostart"
+  fi
+  cp -v /usr/share/applications/arch-update-tray.desktop "$HOME/.config/autostart/"
 
   echo "Enable the arch-update systemd timer"
   systemctl --user enable --now arch-update.timer
