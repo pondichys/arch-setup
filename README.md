@@ -1,16 +1,15 @@
-CAUTION : this is a WIP and the instructions are not working currently
-rEFInd is not able to find the linux kernels as of now
-
-
-# Install Arch Linux with BTRFS, snapper, REFIND and disk encryption on UEFI machine
+# Install Arch Linux with EXT4, disk encryption, UKI and secure boot on UEFI machine
 
 ## Context
-This procedure does not allow a full disk encryption as rEFInd boot manager does not support encrypted /boot partitions like grub does.
+This documentation describes a simple and secure Arch Linux installation.
 
-To enhance the security of the installation, I enable secure boot
+Simple because I use a basic partitioning layout and the good old EXT4 file system.
+Secure because I encrypt everything except the EFI partition (still unsupported at this time). To protect from EFI partition manipulation I decided to enable secure boot.
+
+### A note on secure boot
+At the time of writing this documentation, you must disable secure boot to be able to install Arch Linux. Its configuration MUST happen afterwards.
 
 ## Download latest arch linux iso
-
 Download it from https://archlinux.org/download
 
 ## Prepare USB installation media
@@ -61,90 +60,69 @@ systemctl start sshd.service
 
 ## Configure partitions
 
-I prefer a simple partition layout as following
-
-/ : the main partition. Use BTRFS to enable snapshots and subvolumes.
-/efi : EFI system partition. Use /efi instead of /boot/efi as mentioned in the [EFI system partition - Typical mount points](https://wiki.archlinux.org/title/EFI_system_partition#Typical_mount_points) section of Arch Wiki. 
-
-Use cfdisk (or fdisk if you prefer) to create your partitions.
-
 ```bash
 # Identify your disk device where you want to install arch linux
 lsblk
 
+# Set the disk device you want to use for installation as an environment variable
+# for a kvm/qemu vm
+export INSTALL_DISK=/dev/vda
+# for a SATA ssd/hdd
+# export INSTALL_DISK=/dev/sda
+# for an NVME SSD
+# export INSTALL_DISK=/dev/nvme0n1
+
 # Zap the hard drive
 ## !!!!!!! This action deletes everything on the selected device !!!!!!!
-sgdisk -Z /dev/vda
+sgdisk -Z ${INSTALL_DISK}
 
-# For a virtual machine it will be /dev/vda
-# For a bare metal machine with nvme /dev/nvme0n1
-cfdisk /dev/vda
-# Use gpt label type
-# /dev/vda1  EFI system  1 GB
-# /dev/vda2  Linux Filesystem  the rest (minus swap if you create one)
-```
+# Create a first partition for EFI with a size of 1 GB min
+# We will store kernels on this partition so it should be correctly sized
+# I chose 2 GB here
+sgdisk -n1::+2G -t1:EF00 -c1:'ESP' ${INSTALL_DISK}
+# Create a second partition for Arch Linux install
+sgdisk -n2:: -t2:8300 -c2:'ARCHLINUX' ${INSTALL_DISK}
+# Check the results
+sgdisk -p ${INSTALL_DISK}
+
+# List the block devices
+lsblk
+# Identify both partitions and set environment variables for them
+export EFI_PART=/dev/vda1
+export LINUX_PART=/dev/vda2
+
 
 ## LUKS encryption
-Caution: I use argon2 pbkdf type here as I use reFind as a bootmanager. If you want to switch to grub later on, add the --pbkdf pbkdf2 option to the cryptsetup format command below to ensure support of grub.
+Caution: I use LUKS2 header and thus argon2id pbkdf type. This is possible because I use systemd-boot bootmanager. If you want to switch to grub later on, add the --pbkdf pbkdf2 option to the cryptsetup format command below to ensure support of grub.
 
 ```bash
-cryptsetup luksFormat /dev/vda2
+cryptsetup luksFormat --type luks2 ${LINUX_PART}
 # Type YES to continue
 # Enter your passphrase 2 times
 
 # Open the encrypted device
-cryptsetup luksOpen /dev/vda2 cryptroot
+cryptsetup luksOpen ${LINUX_PART} cryptroot
 ```
 
 ## Format the partitions
 
 ```bash
-mkfs.vfat -F32 -n "EFI" /dev/vda1
-mkfs.btrfs -L ROOT /dev/mapper/cryptroot
+mkfs.vfat -F32 -n "EFI" ${EFI_PART}
+mkfs.ext4 -L ROOT /dev/mapper/cryptroot
 ```
 
-## Create and mount BTRFS subvolumes
+## Create and mount encrypted root partition
 
 ```bash
-BTRFS_OPTS="noatime,compress=zstd,discard=async"
-CRYPTROOT=/dev/mapper/cryptroot
-
-# Mount BTRFS root on /mnt
-mount -o ${BTRFS_OPTS} ${CRYPTROOT} /mnt
-
-# Create BTRFS subvolumes
-btrfs su cr /mnt/@
-btrfs su cr /mnt/@home
-btrfs su cr /mnt/@opt
-btrfs su cr /mnt/@root
-btrfs su cr /mnt/@srv
-btrfs su cr /mnt/@tmp
-btrfs su cr /mnt/@cache
-btrfs su cr /mnt/@log
-
-umount /mnt
-
-# Mount /mnt using @ BTRFS subvolume
-mount -o ${BTRFS_OPTS},subvol=@ ${CRYPTROOT} /mnt
-
-mkdir -pv /mnt/{home,opt,root,srv,tmp,var}
-mkdir -pv /mnt/var/{cache,log}
-
-mount -o ${BTRFS_OPTS},subvol=@home ${CRYPTROOT} /mnt/home
-mount -o ${BTRFS_OPTS},subvol=@opt ${CRYPTROOT} /mnt/opt
-mount -o ${BTRFS_OPTS},subvol=@root ${CRYPTROOT} /mnt/root
-mount -o ${BTRFS_OPTS},subvol=@srv ${CRYPTROOT} /mnt/srv
-mount -o ${BTRFS_OPTS},subvol=@tmp ${CRYPTROOT} /mnt/tmp
-mount -o ${BTRFS_OPTS},subvol=@cache ${CRYPTROOT} /mnt/var/cache
-mount -o ${BTRFS_OPTS},subvol=@log ${CRYPTROOT} /mnt/var/log
+mount /dev/mapper/cryptroot /mnt
 ```
 
 ## Create and mount the EFI partition
 
 ```bash
-mkdir -p /mnt/efi
+mkdir -pv /mnt/efi
 # Mount /efi
-mount -o noatime /dev/vda1 /mnt/efi
+mount -o noatime ${EFI_PART} /mnt/efi
 
 # Check that everything looks ok
 df -h
@@ -155,13 +133,17 @@ df -h
 Tune the system for optimized download
 
 ```bash
-nano /etc/pacman.conf
 # Set ParallelDownloads to a reasonable number according to your internet connection performance
+sed -i 's/#ParallelDownloads = 5/ParallelDownloads = 10/' /etc/pacman.conf
 
-reflector --country <country> --age 24 --protocol https --sort rate --save /etc/pacman.d/mirrorlist
+# Use best mirrors based on your location
+reflector --country <your country name> --age 24 --protocol https --sort rate --save /etc/pacman.d/mirrorlist
 
-pacstrap -K /mnt base base-devel linux linux-firmware amd-ucode btrfs-progs \
-    neovim networkmanager refind git
+# If you use AMD CPU
+pacstrap -K /mnt base base-devel linux linux-headers linux-firmware cryptsetup neovim networkmanager git e2fsprogs dosfstools sbctl sudo amd-ucode
+# If you use Intel CPU
+# pacstrap -K /mnt base base-devel linux linux-headers linux-firmware cryptsetup neovim networkmanager git e2fsprogs dosfstools sbctl sudo intel-ucode
+
 ```
 
 ## Generate fstab
@@ -179,9 +161,9 @@ timedatectl set-ntp true
 # CHROOT into the newly installed system
 arch-chroot /mnt
 
-
-# Edit /etc/local.gen and uncomment your locales
+# Edit /etc/locale.gen and uncomment your locales
 # I use en_US.UTF-8 UTF-8
+sed -i 's/#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
 # Regenerate the locales
 locale-gen
 
@@ -190,37 +172,53 @@ systemd-firstboot --prompt
 
 # Add user
 USER=<your_user_name>
-useradd -mg users -G wheel,storage,power -s /bin/bash $USER
+useradd -m -g users -G wheel -s /bin/bash $USER
 passwd $USER
 echo "$USER ALL=(ALL) ALL" >> /etc/sudoers.d/$USER 
 chmod 0440 /etc/sudoers.d/$USER
 
 # Setup mkinitcpio to handle encryption correctly
-# Edit /etc/mkinitcpio.conf and make sure keyboard, keymap (if using non english keyboard layout), consolefont and encrypt hooks are present
-# Like HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt filesystems fsck)
+# I use a systemd based initramfs so the HOOKS section must be equal to
+# HOOKS=(base systemd autodetect modconf kms keyboard sd-vconsole block sd-encrypt filesystems fsck)
 
-# Generate the initramfs in /boot
+# Setup Unified Kernel Images in /etc/mkinitcpio.d/linux.preset
+# Also disable fallback entry (meaningless most of the time, it's better to install another kernel like linux-lts
+sed -i \
+    -e '/^#ALL_config/s/^#//' \
+    -e '/^#default_uki/s/^#//' \
+    -e '/^#default_options/s/^#//' \
+    -e 's/default_image=/#default_image=/g' \
+    -e "s/PRESETS=('default' 'fallback')/PRESETS=('default')/g" \
+    "$rootmnt"/etc/mkinitcpio.d/linux.preset
+
+# Setup cmdline options to avoid mkinitcpio warnings when generating the UKI
+echo "quiet rw" > /etc/kernel/cmdline
+
+# Install systemd-boot bootloader
+bootctl install
+
+# Generate UKI
 mkinitcpio -P
 
-# Install refind bootloader
-# This will configure refind in /efi with the btrfs driver
-refind-install
-
-# Edit /efi/EFI/refind/refind.conf and configure the extra_kernel_version_string as in arch wiki rEFInd configuration section at https://wiki.archlinux.org/title/REFInd#Configuration
-# extra_kernel_version_strings "linux-hardened,linux-rt-lts,linux-zen,linux-lts,linux-rt,linux"
-
-# Next edit /boot/refind_linux.conf because the refind_install script has configured the parameters of the live ISO kernel and not the ones of the chroot environment
-# Retrieve the UUID of /dev/mapper/cryptroot and the LUKS device /dev/vda2
-ROOT_UUID=$(blkid -s UUID -o value /dev/mapper/cryptroot)
-LUKS_UUID=$(blkid -s UUID -o value /dev/sda2)
-
-# It should have the following content
-# "Boot using default options"     "root=UUID=$ROOT_UUID cryptdevice=UUID=$LUKS_UUID:root rootflags=subvol=@ rw add_efi_memmap initrd=@\boot\initramfs-%v.img"
-# "Boot using fallback initramfs"  "root=UUID=$ROOT_UUID cryptdevice=UUID=$LUKS_UUID:root rootflags=subvol=@ rw add_efi_memmap initrd=@\boot\initramfs-%v-fallback.img"
-# "Boot to terminal"               "root=UUID=$ROOT_UUID cryptdevice=UUID=$LUKS_UUID:root rootflags=subvol=@ rw add_efi_memmap initrd=@\boot\initramfs-%v.img systemd.unit=multi-user.target"
-
-# Optional - setup root password
+# Setup root password
 passwd
+
+# Check secure boot status
+# setup mode MUST be enabled
+sbctl status
+
+# Create secure boot keys
+sbctl create-keys
+# Enroll your keys and the ones from Microsoft to avoid unpleasant surprises ...
+sbctl enroll-keys -m
+# Sign systemd bootlader
+sbctl sign -s -o /usr/lib/systemd/boot/efi/systemd-bootx64.efi.signed /usr/lib/systemd/boot/efi/systemd-bootx64.efi
+# Sign UKI
+sbctl sign -s /efi/EFI/Linux/arch-linux.efi
+# Reinstall the bootlader
+bootctl install
+# Verify the setup - everything should be ok
+sbctl verify
 
 # Exit chroot and reboot
 exit
@@ -228,11 +226,7 @@ reboot
 ```
 
 
-
-
-
-
-Create a key file to avoid entering password twice (once to get to grub and once to open the / partition)
+## Create a key file to avoid entering password twice
 
 ```bash
 # Switch to root user
@@ -256,15 +250,9 @@ mkinitcpio -P
 ```
 
 
+## Install KDE Plasma desktop environment
 
-
-## Snapper snapshots
-
-Create a snapper configuration named root for / path
-
-Install `snap-pac` package to automatically create snapshots when a `pacman` transaction is executed.
-
-Reference: [snap-pac documentation](https://barnettphd.com/snap-pac/index.html)
+sudo pacman -S plasma-desktop sddm kde-system-meta konsole
 
 ## Enable multithread compilation of AUR packages
 Edit the file `/etc/makepkg.conf` and set `MAKEFLAGS="-j<number of threads>"`
