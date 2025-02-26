@@ -90,7 +90,7 @@ lsblk
 # Identify both partitions and set environment variables for them
 export EFI_PART=/dev/vda1
 export LINUX_PART=/dev/vda2
-
+```
 
 ## LUKS encryption
 Caution: I use LUKS2 header and thus argon2id pbkdf type. This is possible because I use systemd-boot bootmanager. If you want to switch to grub later on, add the --pbkdf pbkdf2 option to the cryptsetup format command below to ensure support of grub.
