@@ -78,8 +78,7 @@ sgdisk -Z ${INSTALL_DISK}
 
 # Create a first partition for EFI with a size of 1 GB min
 # We will store kernels on this partition so it should be correctly sized
-# I chose 2 GB here
-sgdisk -n1::+2G -t1:EF00 -c1:'ESP' ${INSTALL_DISK}
+sgdisk -n1::+1G -t1:EF00 -c1:'ESP' ${INSTALL_DISK}
 # Create a second partition for Arch Linux install
 sgdisk -n2:: -t2:8300 -c2:'ARCHLINUX' ${INSTALL_DISK}
 # Check the results
@@ -120,9 +119,9 @@ mount /dev/mapper/cryptroot /mnt
 ## Create and mount the EFI partition
 
 ```bash
-mkdir -pv /mnt/efi
-# Mount /efi
-mount -o noatime ${EFI_PART} /mnt/efi
+mkdir -pv /mnt/boot
+# Mount /boot
+mount -o noatime ${EFI_PART} /mnt/boot
 
 # Check that everything looks ok
 df -h
