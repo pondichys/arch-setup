@@ -1,4 +1,4 @@
-# Install Arch Linux with EXT4, disk encryption and secure boot on UEFI machine
+# Install Arch Linux with EXT4, disk encryption, Universal Kernel Image and secure boot on UEFI machine
 
 ## Context
 This documentation describes a simple and relatively secure Arch Linux installation.
@@ -119,9 +119,9 @@ mount /dev/mapper/cryptroot /mnt
 ## Create and mount the EFI partition
 
 ```bash
-mkdir -pv /mnt/boot
-# Mount /boot
-mount -o noatime ${EFI_PART} /mnt/boot
+mkdir -pv /mnt/efi
+# Mount /efi
+mount -o noatime ${EFI_PART} /mnt/efi
 
 # Check that everything looks ok
 df -h
@@ -133,15 +133,15 @@ Tune the system for optimized download
 
 ```bash
 # Set ParallelDownloads to a reasonable number according to your internet connection performance
-sed -i 's/#ParallelDownloads/ParallelDownloads/' /etc/pacman.conf
+sed -i 's/#ParallelDownloads = 5/ParallelDownloads = 10/' /etc/pacman.conf
 
 # Use best mirrors based on your location
 reflector --country <your country name> --age 24 --protocol https --sort rate --save /etc/pacman.d/mirrorlist
 
 # If you use AMD CPU
-pacstrap -K /mnt base base-devel linux linux-headers linux-firmware cryptsetup neovim networkmanager git e2fsprogs dosfstools sbctl sudo amd-ucode
+pacstrap -K /mnt base base-devel linux linux-headers linux-firmware cryptsetup neovim networkmanager git e2fsprogs dosfstools efibootmgr sbctl sudo amd-ucode
 # If you use Intel CPU
-# pacstrap -K /mnt base base-devel linux linux-headers linux-firmware cryptsetup neovim networkmanager git e2fsprogs dosfstools sbctl sudo intel-ucode
+# pacstrap -K /mnt base base-devel linux linux-headers linux-firmware cryptsetup neovim networkmanager git e2fsprogs dosfstools efibootmgr sbctl sudo intel-ucode
 
 ```
 
@@ -180,40 +180,37 @@ chmod 0440 /etc/sudoers.d/$USER
 
 # Setup mkinitcpio to handle encryption correctly
 # I use a systemd based initramfs so the HOOKS section must be equal to
-
 # HOOKS=(systemd autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt filesystems fsck)
-
+sed -i \
+    -e 's/base udev/systemd/g' \
+    -e 's/keymap consolefont/sd-vconsole sd-encrypt/g' \
+    /etc/mkinitcpio.conf
 
 # Install systemd-boot bootloader
 bootctl install
+
+# Setup kernel command line parameters
+mkdir -pv /etc/cmdline.d
+echo "rd.luks.name=$(blkid -s UUID -o value $LINUX_PART)=cryptroot root=/dev/mapper/cryptroot rw" > /etc/cmdline.d/root.conf
+
+# Setup mkiniticpio preset file to generate UKI instead of initram + kernel
+sed -i \
+    -e '/^#ALL_config/s/^#//' \
+    -e '/^#default_uki/s/^#//' \
+#    -e '/^#default_options/s/^#//' \
+    -e 's/default_image=/#default_image=/g' \
+#    -e "s/PRESETS=('default' 'fallback')/PRESETS=('default')/g" \
+    /etc/mkinitcpio.d/linux.preset
 
 # Generate initramfs and kernel images
 mkinitcpio -P
 
 # Configure systemd-boot
 # Main loader config
-cat <<EOF > /boot/loader/loader.conf
-default arch.conf
+cat <<EOF > /efi/loader/loader.conf
+default @saved
 timeout 4
 console-mode max
-EOF
-
-# Entry for arch standard kernel
-cat <<EOF > /boot/loader/entries/arch.conf
-title   Arch Linux
-linux   /vmlinuz-linux
-initrd  /amd-ucode.img
-initrd  /initramfs-linux.img
-options rd.luks.name=$(blkid -s UUID -o value $LINUX_PART)=cryptroot root=/dev/mapper/cryptroot rw
-EOF
-
-# Entry for fallback
-cat <<EOF > /boot/loader/entries/arch-fallback.conf
-title   Arch Linux (fallback initramfs)
-linux   /vmlinuz-linux
-initrd  /amd-ucode.img
-initrd  /initramfs-linux-fallback.img
-options rd.luks.name=$(blkid -s UUID -o value $LINUX_PART)=cryptroot root=/dev/mapper/cryptroot rw
 EOF
 
 # Setup root password
@@ -231,12 +228,18 @@ sbctl enroll-keys -m
 sbctl sign -s -o /usr/lib/systemd/boot/efi/systemd-bootx64.efi.signed /usr/lib/systemd/boot/efi/systemd-bootx64.efi
 
 # Sign the kernel and cpu microcode
-sbctl sign -s /boot/vmlinuz-linux
+sbctl sign -s /efi/EFI/Linux/arch-linux.efi
+sbctl sign -s /efi/EFI/Linux/arch-linux-fallback.efi
 
 # Reinstall the bootlader
 bootctl install
 # Verify the setup - everything should be ok
 sbctl verify
+
+# Prepare services for reboot
+systemctl enable NetworkManager.service
+systemctl enable systemd-timesyncd
+systemctl mask systemd-networkd
 
 # Exit chroot and reboot
 exit
@@ -244,11 +247,36 @@ umount -R /mnt
 reboot
 ```
 
-## Install KDE Plasma desktop environment
+## Install a new kernel
+Let's install the LTS kernel.
 
 ```bash
-sudo pacman -S plasma-desktop sddm kde-system-meta konsole
+# Install the linux-lts package
+sudo pacman -S linux-lts
+
+# The hooks will build the vmlinuz-lts image because UKI for LTS is not configured in mkiniticpio presets
+# So configure presets for the new kernel
+
+# Setup mkiniticpio preset file to generate UKI instead of initram + kernel
+sed -i \
+    -e '/^#ALL_config/s/^#//' \
+    -e '/^#default_uki/s/^#//' \
+#    -e '/^#default_options/s/^#//' \
+    -e 's/default_image=/#default_image=/g' \
+#    -e "s/PRESETS=('default' 'fallback')/PRESETS=('default')/g" \
+    /etc/mkinitcpio.d/linux-lts.preset
+
+# Generate UKI for LTS kernel 
+mkinitcpio -p linux-lts
+
+# Check if everything is signed correctly
+sbctl verify
+
+# Check that systemd-boot finds the new kernel
+
+bootctl list
 ```
+
 
 ## Enable multithread compilation of AUR packages
 Edit the file `/etc/makepkg.conf` and set `MAKEFLAGS="-j<number of threads>"`
