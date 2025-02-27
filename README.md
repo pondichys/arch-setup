@@ -1,4 +1,4 @@
-# Install Arch Linux with EXT4, disk encryption, UKI and secure boot on UEFI machine
+# Install Arch Linux with EXT4, disk encryption and secure boot on UEFI machine
 
 ## Context
 This documentation describes a simple and secure Arch Linux installation.
