@@ -200,6 +200,7 @@ EOF
 cat <<EOF > /boot/loader/entries/arch.conf
 title   Arch Linux
 linux   /vmlinuz-linux
+initrd  /amd-ucode.img
 initrd  /initramfs-linux.img
 options rd.luks.name=$(blkid -s UUID -o value $LINUX_PART)=cryptroot root=/dev/mapper/cryptroot rw
 EOF
@@ -208,10 +209,10 @@ EOF
 cat <<EOF > /boot/loader/entries/arch-fallback.conf
 title   Arch Linux (fallback initramfs)
 linux   /vmlinuz-linux
+initrd  /amd-ucode.img
 initrd  /initramfs-linux-fallback.img
 options rd.luks.name=$(blkid -s UUID -o value $LINUX_PART)=cryptroot root=/dev/mapper/cryptroot rw
 EOF
-
 
 # Setup root password
 passwd
@@ -226,8 +227,10 @@ sbctl create-keys
 sbctl enroll-keys -m
 # Sign systemd bootlader
 sbctl sign -s -o /usr/lib/systemd/boot/efi/systemd-bootx64.efi.signed /usr/lib/systemd/boot/efi/systemd-bootx64.efi
-# Sign UKI
-sbctl sign -s /efi/EFI/Linux/arch-linux.efi
+
+# Sign the kernel and cpu microcode
+sbctl sign -s /boot/vmlinuz-linux
+
 # Reinstall the bootlader
 bootctl install
 # Verify the setup - everything should be ok
@@ -235,33 +238,9 @@ sbctl verify
 
 # Exit chroot and reboot
 exit
+umount -R /mnt
 reboot
 ```
-
-
-## Create a key file to avoid entering password twice
-
-```bash
-# Switch to root user
-sudo -i
-
-# Generate the key file. You can obviously play with settings to harden it more 
-dd bs=512 count=4 if=/dev/random iflag=fullblock | install -m 0600 /dev/stdin /etc/cryptsetup-keys.d/root.key
-
-# Add the key file as a LUKS key allowed to open the LUKS device
-cryptsetup luksAddKey /dev/sdX# /etc/cryptsetup-keys.d/root.key
-
-# Add the key file to the FILEs section of mkinitcpio configuration. This will embed the file in the initramfs
-
-# Lastly, add the location of the key file as a kernel parameter in /etc/default/grub
-cryptkey=rootfs:/etc/cryptsetup-keys.d/root.key
-
-# Regenerate grub configuration and initramfs
-grub-mkconfig -o /boot/grub/grub.cfg
-mkinitcpio -P
-
-```
-
 
 ## Install KDE Plasma desktop environment
 
@@ -285,16 +264,7 @@ cryptsetup luksOpen /dev/vda2 cryptroot
 Mount the file systems
 
 ```bash
-BTRFS_OPTS="noatime,compress=zstd,discard=async"
-mount -o ${BTRFS_OPTS},subvol=@ /dev/mapper/cryptroot /mnt
-mount -o ${BTRFS_OPTS},subvol=@home ${CRYPTROOT} /mnt/home
-mount -o ${BTRFS_OPTS},subvol=@opt ${CRYPTROOT} /mnt/opt
-mount -o ${BTRFS_OPTS},subvol=@root ${CRYPTROOT} /mnt/root
-mount -o ${BTRFS_OPTS},subvol=@srv ${CRYPTROOT} /mnt/srv
-mount -o ${BTRFS_OPTS},subvol=@tmp ${CRYPTROOT} /mnt/tmp
-mount -o ${BTRFS_OPTS},subvol=@cache ${CRYPTROOT} /mnt/var/cache
-mount -o ${BTRFS_OPTS},subvol=@log ${CRYPTROOT} /mnt/var/log
-mount -o noatime /dev/vda1 /mnt/efi
+
 ```
 
 Enter in CHROOT and fix the system
