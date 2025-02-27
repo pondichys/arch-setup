@@ -180,9 +180,9 @@ chmod 0440 /etc/sudoers.d/$USER
 
 # Setup mkinitcpio to handle encryption correctly
 # I use a systemd based initramfs so the HOOKS section must be equal to
-# HOOKS=(base systemd autodetect modconf kms keyboard sd-vconsole block sd-encrypt filesystems fsck)
+# HOOKS=(systemd autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt filesystems fsck)
 sed -i \
-    -e 's/base udev/base systemd/g' \
+    -e 's/base udev/systemd/g' \
     -e 's/keymap consolefont/sd-vconsole sd-encrypt/g' \
     /etc/mkinitcpio.conf
 
