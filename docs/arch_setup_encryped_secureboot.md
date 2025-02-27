@@ -180,7 +180,9 @@ chmod 0440 /etc/sudoers.d/$USER
 
 # Setup mkinitcpio to handle encryption correctly
 # I use a systemd based initramfs so the HOOKS section must be equal to
+
 # HOOKS=(systemd autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt filesystems fsck)
+
 
 # Install systemd-boot bootloader
 bootctl install
