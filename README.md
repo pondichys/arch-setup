@@ -133,7 +133,7 @@ Tune the system for optimized download
 
 ```bash
 # Set ParallelDownloads to a reasonable number according to your internet connection performance
-sed -i 's/#ParallelDownloads = 5/ParallelDownloads = 10/' /etc/pacman.conf
+sed -i 's/#ParallelDownloads/ParallelDownloads/' /etc/pacman.conf
 
 # Use best mirrors based on your location
 reflector --country <your country name> --age 24 --protocol https --sort rate --save /etc/pacman.d/mirrorlist
@@ -167,7 +167,9 @@ sed -i 's/#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
 locale-gen
 
 # Configure console keymap, timezone and hostname
-systemd-firstboot --prompt
+systemd-firstboot --keymap=be-latin1 --locale=en_US.UTF-8 \
+	--locale-messages=en_US.UTF-8 --timezone="Europe/Brussels" \
+	--hostname="arch-vm" --welcome=false
 
 # Add user
 USER=<your_user_name>
@@ -180,24 +182,36 @@ chmod 0440 /etc/sudoers.d/$USER
 # I use a systemd based initramfs so the HOOKS section must be equal to
 # HOOKS=(base systemd autodetect modconf kms keyboard sd-vconsole block sd-encrypt filesystems fsck)
 
-# Setup Unified Kernel Images in /etc/mkinitcpio.d/linux.preset
-# Also disable fallback entry (meaningless most of the time, it's better to install another kernel like linux-lts
-sed -i \
-    -e '/^#ALL_config/s/^#//' \
-    -e '/^#default_uki/s/^#//' \
-    -e '/^#default_options/s/^#//' \
-    -e 's/default_image=/#default_image=/g' \
-    -e "s/PRESETS=('default' 'fallback')/PRESETS=('default')/g" \
-    "$rootmnt"/etc/mkinitcpio.d/linux.preset
-
-# Setup cmdline options to avoid mkinitcpio warnings when generating the UKI
-echo "quiet rw" > /etc/kernel/cmdline
-
 # Install systemd-boot bootloader
 bootctl install
 
-# Generate UKI
+# Generate initramfs and kernel images
 mkinitcpio -P
+
+# Configure systemd-boot
+# Main loader config
+cat <<EOF > /boot/loader/loader.conf
+default arch.conf
+timeout 4
+console-mode max
+EOF
+
+# Entry for arch standard kernel
+cat <<EOF > /boot/loader/entries/arch.conf
+title   Arch Linux
+linux   /vmlinuz-linux
+initrd  /initramfs-linux.img
+options rd.luks.name=$(blkid -s UUID -o value $LINUX_PART)=cryptroot root=/dev/mapper/cryptroot rw
+EOF
+
+# Entry for fallback
+cat <<EOF > /boot/loader/entries/arch-fallback.conf
+title   Arch Linux (fallback initramfs)
+linux   /vmlinuz-linux
+initrd  /initramfs-linux-fallback.img
+options rd.luks.name=$(blkid -s UUID -o value $LINUX_PART)=cryptroot root=/dev/mapper/cryptroot rw
+EOF
+
 
 # Setup root password
 passwd
