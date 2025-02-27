@@ -1,39 +1,36 @@
 # Install Arch Linux with EXT4, disk encryption and secure boot on UEFI machine
 
 ## Context
-This documentation describes a simple and secure Arch Linux installation.
+This documentation describes a simple and relatively secure Arch Linux installation.
 
-Simple because I use a basic partitioning layout and the good old EXT4 file system.
-Secure because I encrypt everything except the EFI partition (still unsupported at this time). To protect from EFI partition manipulation I decided to enable secure boot.
+- Simple: I use a basic partitioning layout and the good old EXT4 file system.
+- Secure: I encrypt everything except the EFI boot partition. To protect from EFI partition manipulation I decided to enable secure boot.
 
 ### A note on secure boot
-At the time of writing this documentation, you must disable secure boot to be able to install Arch Linux. Its configuration MUST happen afterwards.
+At the time of writing this documentation, you must disable secure boot to be able to install Arch Linux.
 
 ## Download latest arch linux iso
-Download it from https://archlinux.org/download
+Download it from [Arch Linux web site](https://archlinux.org/download)
 
 ## Prepare USB installation media
-- Write the downloaded ISO file to an USB stick with Rufus, Balena Etcher or Fedora USB Writer.
-- Or use Ventoy
+- Write the downloaded ISO file to an USB stick with [Rufus](https://rufus.ie/en/), [Balena Etcher](https://etcher.balena.io) or [Fedora Media Writer](https://flathub.org/apps/org.fedoraproject.MediaWriter).
+- Or use [Ventoy](https://www.ventoy.net/en/index.html)
 
 ## Boot on USB key
 Check your motherboard instructions to select the boot device and boot on the USB key containing the arch linux ISO.
 
 ## Configure keyboard layout (optional)
-Enable your keyboard layout if using non english layouts. I'm using belgian or french layouts
+Enable your keyboard layout if using non english layouts. I'm using belgian layout.
 
 ```bash
 # Belgian layout
 loadkeys be-latin1
-
-# French layout
-loadkeys fr
 ```
 
 ## Configure network
 If using ethernet, everything should work out of the box.
 
-If using wifi, use iwctl to configure your wifi connection.
+If using wifi, use `iwctl` to configure your wifi connection.
 
 ```bash
 iwctl
@@ -56,6 +53,9 @@ This allows you to install from another remote computer and just use copy / past
 
 ```bash
 systemctl start sshd.service
+
+# Don't forget to setup a root password to connect through SSH
+passwd
 ```
 
 ## Configure partitions
@@ -244,13 +244,14 @@ reboot
 
 ## Install KDE Plasma desktop environment
 
+```bash
 sudo pacman -S plasma-desktop sddm kde-system-meta konsole
+```
 
 ## Enable multithread compilation of AUR packages
 Edit the file `/etc/makepkg.conf` and set `MAKEFLAGS="-j<number of threads>"`
 
 ## Boot in recovery mode
-
 Insert an USB device with arch linux ISO and boot on it like for the installation process.
 
 Setup the keyboard if needed
@@ -264,7 +265,12 @@ cryptsetup luksOpen /dev/vda2 cryptroot
 Mount the file systems
 
 ```bash
-
+mount /dev/mapper/cryptroot /mnt
+mount /dev/vda1 /mnt/boot
 ```
 
 Enter in CHROOT and fix the system
+
+```bash
+arch-chroot /mnt
+```
