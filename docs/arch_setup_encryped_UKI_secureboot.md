@@ -277,9 +277,36 @@ sbctl verify
 bootctl list
 ```
 
+## Install Plymouth - option
+```bash
+# Switch to root user
+sudo -i
+
+# Install plymouth package
+pacman -S plymouth
+
+# Update mkinitcpio.conf to include the plymouth hook AFTER systemd and BEFORE sd-encrypt
+sed -i \
+    -e 's/sd-vconsole sd-encrypt/sd-vconsole plymouth sd-encrypt/g' \
+    /etc/mkinitcpio.conf
+
+# Add splash option in /etc/cmdline.d
+echo "splash" > /etc/cmdline.d/plymouth.conf
+
+# Regenerate UKI
+mkinitcpio -P
+
+# Reboot to test
+reboot
+```
+
 
 ## Enable multithread compilation of AUR packages
 Edit the file `/etc/makepkg.conf` and set `MAKEFLAGS="-j<number of threads>"`
+
+```bash 
+sudo sed -i -e 's/^#MAKEFLAGS=\"-j2\"/MAKEFLAGS=\"-j2\"/g' /etc/makepkg.conf
+```
 
 ## Boot in recovery mode
 Insert an USB device with arch linux ISO and boot on it like for the installation process.
