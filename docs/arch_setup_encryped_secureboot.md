@@ -244,6 +244,30 @@ umount -R /mnt
 reboot
 ```
 
+## Install Plymouth - option
+```bash
+# Switch to root user
+sudo -i
+
+# Install plymouth package
+pacman -S plymouth
+
+# Update mkinitcpio.conf to include the plymouth hook AFTER systemd and BEFORE sd-encrypt
+sed -i \
+    -e 's/sd-vconsole sd-encrypt/sd-vconsole plymouth sd-encrypt/g' \
+    /etc/mkinitcpio.conf
+
+# Add splash option in kernel options of bootloader entries
+# Edit all files in /boot/loader/entries/
+# options rd.luks.name=$(blkid -s UUID -o value $LINUX_PART)=cryptroot root=/dev/mapper/cryptroot splash rw
+
+# Regenerate initramfs and kernel images
+mkinitcpio -P
+
+# Reboot to test
+reboot
+```
+
 ## Install KDE Plasma desktop environment
 
 ```bash
