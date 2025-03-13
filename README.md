@@ -11,6 +11,7 @@ This repository contains my scripts and documentations to install and configure 
 
 - [base.sh](./scripts/install-base.sh) : base packages common to all my setups.
 - [fonts.sh](./scripts/install-fonts.sh) : nerd fonts.
+- [kde-plasma.sh](./scripts/kde-plasma.sh) : KDE plasma desktop environment.
 - [print_scan.sh](./scripts/print_scan.sh) : enable printing and scanning.
 - [laptop.sh](./scripts/laptop.sh) : laptop specific packages.
 - [virtualbox.sh](./scripts/virtualbox.sh) : install VirtualBox.
