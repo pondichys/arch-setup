@@ -85,3 +85,4 @@ EOF
 echo "Starting ZRAM device"
 sudo systemctl daemon-reload
 sudo systemctl start /dev/zram0
+echo "You can restart your computer to enable zram swap"
