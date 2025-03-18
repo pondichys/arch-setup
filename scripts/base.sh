@@ -74,3 +74,14 @@ sudo pacman -S --needed --noconfirm ufw gufw
 
 # Add current user to sudoers
 #echo "${USER} ALL=(ALL:ALL) ALL" | sudo tee /etc/sudoers.d/${USER}
+
+echo "Installing zram-generator"
+sudo pacman -S --needed --noconfirm zram-generator
+echo "Generating default configuration file /etc/zram-generator.conf"
+cat <<EOF | sudo tee -a /etc/systemd/zram-generator.conf
+[zram0]
+zram-size = min(ram / 2, 4096)
+EOF
+echo "Starting ZRAM device"
+sudo systemctl daemon-reload
+sudo systemctl start /dev/zram0
