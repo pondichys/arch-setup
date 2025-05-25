@@ -2,7 +2,8 @@
 #set -e
 
 # Install linux headers
-# sudo pacman -S --needed --noconfirm linux-headers
+# This is required for DKMS modules to compile
+sudo pacman -S --needed --noconfirm linux-headers
 
 # Install virtualbox
 sudo pacman -S --needed --noconfirm virtualbox virtualbox-host-dkms virtualbox-guest-iso
