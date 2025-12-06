@@ -1,3 +1,6 @@
+> [!WARNING]
+> This repository has been moved to codeberg.org
+
 # ARCH-SETUP 
 
 ## Context
